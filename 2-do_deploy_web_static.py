@@ -1,47 +1,41 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 """
-Created on Mon Aug 13 14:21:54 2020
-@author: Robinson Montes
+    Fabric script that distributes an archive to the web servers.
 """
-from fabric.api import local, put, run, env
-from datetime import datetime
+from os import path
+from fabric.api import env, put, run
 
-env.user = 'ubuntu'
-env.hosts = ['35.227.35.75', '100.24.37.33']
-
-
-def do_pack():
-    """
-    Targginng project directory into a packages as .tgz
-    """
-    now = datetime.now().strftime("%Y%m%d%H%M%S")
-    local('sudo mkdir -p ./versions')
-    path = './versions/web_static_{}'.format(now)
-    local('sudo tar -czvf {}.tgz web_static'.format(path))
-    name = '{}.tgz'.format(path)
-    if name:
-        return name
-    else:
-        return None
+env.hosts = ['35.229.40.200', '35.229.23.118']
 
 
 def do_deploy(archive_path):
-    """Deploy the boxing package tgz file
+    """ Function that distributes the archive.
+    Args:
+        archive_path (str): the path of the archive to deploy on the servers.
     """
+
     try:
-        archive = archive_path.split('/')[-1]
-        path = '/data/web_static/releases/' + archive.strip('.tgz')
-        current = '/data/web_static/current'
+        if not path.exists(archive_path):
+            raise FileNotFoundError
+
+        name = archive_path.split("/")[-1]
+        name_no_ext = name.split(".")[0]
+
+        remote = "/data/web_static/releases"
+        dest = "{}/{}".format(remote, name_no_ext)
+
         put(archive_path, '/tmp')
-        run('mkdir -p {}/'.format(path))
-        run('tar -xzf /tmp/{} -C {}'.format(archive, path))
-        run('rm /tmp/{}'.format(archive))
-        run('mv {}/web_static/* {}'.format(path, path))
-        run('rm -rf {}/web_static'.format(path))
-        run('rm -rf {}'.format(current))
-        run('ln -s {} {}'.format(path, current))
-        print('New version deployed!')
-        return True
+        run('mkdir -p {}/'.format(dest))
+        run('tar -xzf /tmp/{} -C {}'.format(name, dest))
+        run('rm /tmp/{}'.format(name))
+        run('mv {}/web_static/* {}/'.format(dest, dest))
+        run('rm -rf {}/web_static'.format(dest))
+        run('rm -rf /data/web_static/current')
+        run('ln -s {}/ /data/web_static/current'.format(dest))
+
     except:
+        print("Error. Version deploy aborted")
         return False
+
+    print("New version deployed!")
+    return True
