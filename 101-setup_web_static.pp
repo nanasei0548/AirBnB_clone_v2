@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Puppet script that sets up web servers for the deployment of web_static.
 
 include stdlib
